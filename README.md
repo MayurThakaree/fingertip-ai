@@ -1,92 +1,263 @@
-# Fingertip AI — Phase 2
+# Fingertip AI
 
-Builds on Phase 1's global mouse hook + floating popup by wiring the chat
-input up to a real, streaming AI response — powered by Gemini, via the
-provider-agnostic `AIProvider` trait so OpenAI/Claude can be added later
-without touching the popup or command code.
+An AI agent that appears instantly anywhere on your desktop. Open a lightweight popup using a mouse side button or keyboard shortcut, ask questions, rewrite text, summarize content, translate text, and receive streaming AI responses in real time.
 
-## What's new in this phase
+Built with **Rust**, **Tauri**, **TypeScript**, and **Google Gemini**.
 
-- `AIProvider` trait (`src-tauri/src/ai/mod.rs`) with a Gemini
-  implementation (`src-tauri/src/ai/gemini.rs`) that streams responses via
-  Gemini's `streamGenerateContent?alt=sse` endpoint.
-- `ask_ai` Tauri command (`src-tauri/src/commands.rs`) — takes the prompt,
-  calls the provider on a background async task, and emits `ai-chunk` /
-  `ai-done` / `ai-error` events back to the popup as the response streams
-  in. The API key is read from `.env`/`.env.local` via `dotenvy` at
-  startup and never sent to or readable from the frontend JS.
-- Popup input box is now live: type a question, hit Enter, watch the
-  response stream in token-by-token with a loading indicator while
-  waiting for the first chunk.
-- Quick-action buttons (Explain / Rewrite / Translate / Summarize) send a
-  templated prompt built around whatever's currently typed. They'll pick
-  up real selected-text context in Phase 3.
-- Errors (bad/missing API key, network failure, blocked prompt) surface
-  inline in the popup instead of failing silently.
+---
 
-## Get a Gemini API key
+# Features
 
-1. Go to https://aistudio.google.com/apikey
-2. Create a key (free tier is enough to test this)
-3. Copy it into your `.env.local`:
+## Core Features
+
+* Global mouse hook support
+* Floating desktop AI popup
+* Keyboard shortcut support (`Ctrl + Space`)
+* Real-time streaming AI responses
+* Secure backend API handling
+* Fast and lightweight Tauri architecture
+
+## AI Features
+
+* Explain text
+* Rewrite content
+* Translate text
+* Summarize information
+* Streaming token-by-token responses
+* Inline error handling
+
+---
+
+# Phase 2 Overview
+
+Phase 2 extends the popup system introduced in Phase 1 by connecting the interface to a real AI backend.
+
+### Added in Phase 2
+
+* Provider-agnostic `AIProvider` trait
+* Gemini AI implementation
+* Streaming responses using Gemini SSE endpoint
+* Tauri `ask_ai` command
+* Background async processing
+* Frontend event streaming:
+
+  * `ai-chunk`
+  * `ai-done`
+  * `ai-error`
+* Secure environment variable loading
+* Quick action prompts
+* Loading indicators
+* User-friendly error messages
+
+---
+
+# Architecture
+
+```text
+User Input
+     │
+     ▼
+Popup UI (Frontend)
+     │
+     ▼
+Tauri Command (ask_ai)
+     │
+     ▼
+AIProvider Trait
+     │
+     ▼
+Gemini Provider
+     │
+     ▼
+Gemini API
+     │
+     ▼
+Streaming Response
+     │
+     ▼
+Popup UI
+```
+
+---
+
+# Technology Stack
+
+* Rust
+* Tauri
+* TypeScript
+* HTML
+* CSS
+* Gemini API
+* Reqwest
+* Tokio
+* dotenvy
+
+---
+
+# Getting a Gemini API Key
+
+Create a Gemini API key from:
+
+[Google AI Studio API Keys](https://aistudio.google.com/apikey?utm_source=chatgpt.com)
+
+Copy the key into `.env.local`.
 
 ```bash
 cp .env.example .env.local
 ```
 
 Edit `.env.local`:
+
 ```env
 AI_PROVIDER=gemini
-AI_API_KEY=paste-your-real-key-here
+AI_API_KEY=your-api-key
 ```
 
-**Never commit `.env.local`** — it's already in `.gitignore`.
+> Never commit `.env.local` to GitHub.
 
-## Prerequisites (same as Phase 1 — Windows 10/11 only)
+---
 
-1. **Rust** (stable) — https://rustup.rs
-2. **Node.js 18+** and npm
-3. **WebView2 runtime** — usually preinstalled
-4. Microsoft C++ Build Tools ("Desktop development with C++" workload)
+# Prerequisites
 
-## Installation
+Windows 10 or Windows 11
+
+Required software:
+
+1. Rust (Stable)
+2. Node.js 18+
+3. npm
+4. Microsoft Edge WebView2 Runtime
+5. Microsoft C++ Build Tools
+
+Downloads:
+
+* [Rust Installer](https://rustup.rs?utm_source=chatgpt.com)
+* [Node.js](https://nodejs.org?utm_source=chatgpt.com)
+
+---
+
+# Installation
 
 ```bash
 npm install
 ```
 
-## Development
+---
+
+# Running in Development Mode
 
 ```bash
 npm run tauri dev
 ```
 
-## How to test Phase 2
+---
 
-1. Long-press your mouse's side button (or `Ctrl+Space`) to open the
-   popup, same as Phase 1.
-2. Type a question — e.g. `"What is Rust's ownership model?"` — and press
-   Enter.
-3. You should see a brief loading indicator (three bouncing dots), then
-   the response should stream in visibly, piece by piece.
-4. Try a quick-action button (e.g. type some text, click **Explain**) —
-   it should send a templated prompt built from what you typed.
-5. Test the error path: temporarily put a garbage value in `AI_API_KEY`
-   in `.env.local`, restart `npm run tauri dev`, and confirm you get a
-   clear inline error in the popup instead of a silent failure or crash.
+# Testing
 
-## Troubleshooting (Phase 2 additions)
+### Ask a Question
 
-| Symptom | Likely cause / fix |
-|---|---|
-| "missing or empty API key" error in the popup | `.env.local` wasn't found/loaded, or `AI_API_KEY` is blank. Confirm the file is in `fingertip-ai/` (same level as `package.json`, NOT inside `src-tauri/`), and restart `npm run tauri dev` after editing it — env vars are only read at process startup. |
-| "unknown AI_PROVIDER" error | Only `gemini` is implemented in Phase 2. Check `.env.local` doesn't have a typo like `Gemini` with capital G — comparison is case-insensitive so that's fine, but `gemeni` or similar would fail. |
-| Response never starts streaming, no error either | Check your internet connection, and that the Gemini API isn't rate-limited/blocked on your network. Also confirm `reqwest`'s TLS feature compiled correctly — a fresh `cargo clean` in `src-tauri/` then re-running `npm run tauri dev` can help if you swapped Rust toolchains recently. |
-| "prompt blocked" error | Gemini's safety filters rejected the input. Try rephrasing; this isn't a bug. |
-| Popup input box stays disabled after an error | This is currently a known Phase 2 rough edge — the input only re-enables once the message reaches `"done"` or `"error"` status. If it seems stuck, close and reopen the popup as a workaround; will be hardened in a later pass. |
+1. Open the popup using:
 
-## Next phases (not in this build)
+   * Mouse side button
+   * `Ctrl + Space`
 
-- **Phase 3**: clipboard-based "use selected text?" flow, so quick actions operate on real selected text instead of the typed input box.
-- **Phase 4**: manual screenshot capture + vision model call.
-- **Phase 5**: system tray, full settings panel (mouse/AI/appearance), configurable shortcut, signed installer.
+2. Enter a question:
+
+```text
+What is Rust's ownership model?
+```
+
+3. Press Enter.
+
+4. Watch the response stream live.
+
+---
+
+### Test Quick Actions
+
+Type text and select:
+
+* Explain
+* Rewrite
+* Translate
+* Summarize
+
+The selected action will automatically create a prompt and send it to Gemini.
+
+---
+
+### Test Error Handling
+
+Replace your API key with an invalid value:
+
+```env
+AI_API_KEY=invalid-key
+```
+
+Restart the application:
+
+```bash
+npm run tauri dev
+```
+
+You should see an error message displayed inside the popup.
+
+---
+
+# Troubleshooting
+
+| Problem                | Solution                                            |
+| ---------------------- | --------------------------------------------------- |
+| Missing API key error  | Verify `.env.local` exists and contains a valid key |
+| Unknown AI provider    | Ensure `AI_PROVIDER=gemini`                         |
+| Response never streams | Check internet connection and Gemini availability   |
+| Prompt blocked         | Gemini safety filters rejected the request          |
+| Popup stays disabled   | Close and reopen the popup                          |
+
+---
+
+# Project Structure
+
+```text
+fingertip-ai/
+│
+├── src/
+├── src-tauri/
+│   ├── src/
+│   │   ├── ai/
+│   │   │   ├── mod.rs
+│   │   │   └── gemini.rs
+│   │   ├── commands.rs
+│   │   └── main.rs
+│   │
+│   └── Cargo.toml
+│
+├── .env.example
+├── package.json
+└── README.md
+```
+
+---
+
+
+
+# Security
+
+* API keys remain on the backend
+* Environment variables are never exposed to the frontend
+* `.env.local` is excluded from Git tracking
+* No AI credentials are stored in frontend code
+
+---
+
+# Future Vision
+
+Fingertip AI aims to become a universal desktop AI assistant that can understand selected text, screenshots, documents, and on-screen content from any application while remaining fast, lightweight, and privacy-conscious.
+
+---
+
+# License
+
+MIT License
+
+Copyright (c) 2026 Mayur Thakare
